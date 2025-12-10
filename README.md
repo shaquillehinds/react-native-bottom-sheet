@@ -10,8 +10,9 @@ A performant, highly customizable bottom sheet component for React Native that j
 - 🎯 **Multiple Snap Points** - Define custom snap positions as percentages of screen height
 - 📱 **Keyboard Aware** - Intelligent keyboard avoidance with per-input customization
 - 🎨 **Fully Customizable** - Style every aspect from bumper to backdrop
-- 🔄 **Portal Support** - Optional portal rendering for complex navigation hierarchies
-- 📜 **Scrollable Content** - Built-in FlatList and ScrollView components with proper gesture handling
+- 🔄 **Portal System** - Renders at app root level above navigation with `BottomSheetPortalProvider`
+- 🎪 **Advanced Portal APIs** - Manual portal control with `useBottomSheetPortal` and `useBottomSheetPortalComponent`
+- 📜 **Scrollable Content** - Built-in FlatList and ScrollView components with proper gesture handlin
 - ⚡ **High Performance** - Optimized animations using `useImperativeHandle` for render isolation
 - 🎭 **Modal & Inline Modes** - Use as a full modal or inline component
 - 🔒 **Type Safe** - Full TypeScript support with comprehensive type definitions
@@ -40,7 +41,40 @@ This package requires the following peer dependencies:
 npm install react-native-reanimated react-native-gesture-handler @shaquillehinds/react-native-essentials
 ```
 
+### Setup
+
+Wrap your app with `BottomSheetPortalProvider` at the root level:
+
+```tsx
+import { BottomSheetPortalProvider } from '@shaquillehinds/react-native-bottom-sheet';
+
+export default function App() {
+  return (
+    <BottomSheetPortalProvider>
+      {/* Your app content */}
+    </BottomSheetPortalProvider>
+  );
+}
+```
+
+This provider enables bottom sheets to render at the top level of your app, above all other content including navigation.
+
 ## Quick Start
+
+First, wrap your app with the portal provider:
+
+```tsx
+// App.tsx
+import { BottomSheetPortalProvider } from '@shaquillehinds/react-native-bottom-sheet';
+
+export default function App() {
+  return (
+    <BottomSheetPortalProvider>
+      <YourApp />
+    </BottomSheetPortalProvider>
+  );
+}
+```
 
 ### Basic Modal Bottom Sheet
 
@@ -53,7 +87,7 @@ import {
 } from '@shaquillehinds/react-native-bottom-sheet';
 import type { BottomModalRefObject } from '@shaquillehinds/react-native-bottom-sheet';
 
-export default function App() {
+export default function MyScreen() {
   const [showModal, setShowModal] = useState(false);
   const bottomSheetRef = useRef<BottomModalRefObject>(null);
 
@@ -109,6 +143,110 @@ Optimized FlatList with proper gesture handling inside bottom sheets.
 ### `BottomSheetScrollView`
 
 Optimized ScrollView with proper gesture handling inside bottom sheets.
+
+## Portal System
+
+The portal system allows bottom sheets to render at the root level of your app, ensuring they appear above all content including navigation stacks.
+
+### `BottomSheetPortalProvider`
+
+**Required**: Wrap your app root with this provider to enable portal functionality.
+
+```tsx
+import { BottomSheetPortalProvider } from '@shaquillehinds/react-native-bottom-sheet';
+
+export default function App() {
+  return (
+    <BottomSheetPortalProvider>
+      <Navigation />
+    </BottomSheetPortalProvider>
+  );
+}
+```
+
+**Props:**
+
+| Prop                  | Type     | Default | Description                                                        |
+| --------------------- | -------- | ------- | ------------------------------------------------------------------ |
+| `unMountBufferTimeMS` | `number` | `100`   | Delay before removing portal items (prevents premature unmounting) |
+| `updateBufferTimeMS`  | `number` | -       | Throttle time for portal updates (prevents infinite update loops)  |
+
+### `useBottomSheetPortal`
+
+Access portal context to manually mount/update/unmount portal items.
+
+```tsx
+import { useBottomSheetPortal } from '@shaquillehinds/react-native-bottom-sheet';
+
+function MyComponent() {
+  const portal = useBottomSheetPortal();
+
+  useEffect(() => {
+    if (portal) {
+      const key = portal.mount('my-portal-key', <MyPortalContent />);
+      return () => portal.unmount(key);
+    }
+  }, []);
+
+  return <View />;
+}
+```
+
+**Methods:**
+
+```typescript
+{
+  mount: (key: string | number, element: ReactNode, onMount?: (key) => void) => PortalKey;
+  update: (key: string | number, element: ReactNode) => void;
+  unmount: (key: string | number, onUnMount?: (key) => void) => void;
+}
+```
+
+### `useBottomSheetPortalComponent`
+
+Simplified hook for mounting a component to the portal with automatic lifecycle management.
+
+```tsx
+import { useBottomSheetPortalComponent } from '@shaquillehinds/react-native-bottom-sheet';
+
+function MyComponent() {
+  const [showOverlay, setShowOverlay] = useState(true);
+
+  useBottomSheetPortalComponent({
+    name: 'my-overlay',
+    Component: showOverlay ? <OverlayContent /> : null,
+    disable: !showOverlay,
+  });
+
+  return <View />;
+}
+```
+
+**Props:**
+
+| Prop                  | Type            | Description                                      |
+| --------------------- | --------------- | ------------------------------------------------ |
+| `name`                | `string`        | Unique identifier for the portal component       |
+| `Component`           | `ReactNode`     | The component to render in the portal            |
+| `disable`             | `boolean`       | Disables portal rendering when true              |
+| `CustomPortalContext` | `React.Context` | Use a custom portal context (for scoped portals) |
+
+### Types
+
+```typescript
+import type {
+  PortalItem,
+  PortalKey,
+  PortalContextValue,
+} from '@shaquillehinds/react-native-bottom-sheet';
+
+type PortalItem = {
+  key: PortalKey;
+  element: ReactNode;
+};
+
+type PortalKey = number | string;
+```
 
 ## API Reference
 
@@ -468,9 +606,37 @@ Or use opacity animation:
 
 ### Portal Management
 
-By default, the bottom sheet uses a portal to render at the root level. You can customize this:
+By default, bottom sheets use the portal system to render at the root level, ensuring they appear above all content.
 
-#### Disable Portal
+#### Using Default Portal (Recommended)
+
+The bottom sheet automatically uses the portal when `BottomSheetPortalProvider` is set up:
+
+```tsx
+// App.tsx
+import { BottomSheetPortalProvider } from '@shaquillehinds/react-native-bottom-sheet';
+
+export default function App() {
+  return (
+    <BottomSheetPortalProvider>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen name="Home" component={HomeScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </BottomSheetPortalProvider>
+  );
+}
+
+// HomeScreen.tsx - bottom sheet will render above navigation
+<BottomSheetModal showModal={showModal} setShowModal={setShowModal}>
+  <YourContent />
+</BottomSheetModal>;
+```
+
+#### Disable Portal Rendering
+
+If you want the bottom sheet to render in its natural position in the component tree:
 
 ```tsx
 <BottomSheetModal
@@ -482,26 +648,124 @@ By default, the bottom sheet uses a portal to render at the root level. You can 
 </BottomSheetModal>
 ```
 
-#### Custom Portal Context
+#### Custom Portal Context (Advanced)
+
+Create scoped portals for specific parts of your app:
 
 ```tsx
-import { createPortalContext } from '@shaquillehinds/react-native-essentials';
+import {
+  BottomSheetPortalProvider,
+  useBottomSheetPortal,
+} from '@shaquillehinds/react-native-bottom-sheet';
+import { createContext } from 'react';
+import type { PortalContextValue } from '@shaquillehinds/react-native-bottom-sheet';
 
-const MyPortalContext = createPortalContext();
+// Create a custom portal context
+const MyCustomPortalContext = createContext<PortalContextValue | undefined>(
+  undefined
+);
 
-// In your app root
-<MyPortalContext.Provider>
-  <YourApp />
-</MyPortalContext.Provider>
+// Wrap specific section with custom portal provider
+function MySection() {
+  return (
+    <BottomSheetPortalProvider CustomPortalContext={MyCustomPortalContext}>
+      <MySectionContent />
+    </BottomSheetPortalProvider>
+  );
+}
 
-// In your component
+// Use the custom context in your bottom sheet
 <BottomSheetModal
-  CustomPortalContext={MyPortalContext}
+  CustomPortalContext={MyCustomPortalContext}
   showModal={showModal}
   setShowModal={setShowModal}
 >
   <YourContent />
-</BottomSheetModal>
+</BottomSheetModal>;
+```
+
+#### Manual Portal Control
+
+For advanced use cases where you need direct portal control:
+
+```tsx
+import { useBottomSheetPortal } from '@shaquillehinds/react-native-bottom-sheet';
+
+function CustomPortalComponent() {
+  const portal = useBottomSheetPortal();
+  const [portalKey, setPortalKey] = useState<string | number | null>(null);
+
+  const mountContent = () => {
+    if (portal) {
+      const key = portal.mount(
+        'custom-content',
+        <View style={{ padding: 20, backgroundColor: 'white' }}>
+          <Text>Portal Content</Text>
+        </View>,
+        (key) => console.log('Mounted:', key)
+      );
+      setPortalKey(key);
+    }
+  };
+
+  const updateContent = () => {
+    if (portal && portalKey) {
+      portal.update(
+        portalKey,
+        <View style={{ padding: 20, backgroundColor: 'blue' }}>
+          <Text>Updated Content</Text>
+        </View>
+      );
+    }
+  };
+
+  const unmountContent = () => {
+    if (portal && portalKey) {
+      portal.unmount(portalKey, (key) => console.log('Unmounted:', key));
+      setPortalKey(null);
+    }
+  };
+
+  return (
+    <View>
+      <Button title="Mount" onPress={mountContent} />
+      <Button title="Update" onPress={updateContent} />
+      <Button title="Unmount" onPress={unmountContent} />
+    </View>
+  );
+}
+```
+
+#### Using Portal Component Hook
+
+Simplified component-based portal management with automatic cleanup:
+
+```tsx
+import { useBottomSheetPortalComponent } from '@shaquillehinds/react-native-bottom-sheet';
+
+function ToastNotification() {
+  const [message, setMessage] = useState('');
+  const [show, setShow] = useState(false);
+
+  // Automatically mounts/unmounts based on show state
+  useBottomSheetPortalComponent({
+    name: 'toast-notification',
+    Component: show ? (
+      <View style={{ position: 'absolute', top: 50, alignSelf: 'center' }}>
+        <Text>{message}</Text>
+      </View>
+    ) : null,
+    disable: !show,
+  });
+
+  const showToast = (msg: string) => {
+    setMessage(msg);
+    setShow(true);
+    setTimeout(() => setShow(false), 3000);
+  };
+
+  return <Button title="Show Toast" onPress={() => showToast('Hello!')} />;
+}
 ```
 
 ### Navigation Integration
@@ -533,17 +797,35 @@ bottomSheetRef.current?.closeModal({
 Full TypeScript support with comprehensive type definitions:
 
 ```typescript
+// Component Props
 import type {
   BottomSheetProps,
   BottomSheetModalProps,
+  BottomSheetFlatlistProps,
+  BottomSheetScrollViewProps,
+} from '@shaquillehinds/react-native-bottom-sheet';
+
+// Ref Types
+import type {
   BottomModalRefObject,
   BottomSheetRefObject,
   BottomModalRef,
   BottomSheetRef,
+} from '@shaquillehinds/react-native-bottom-sheet';
+
+// State and Config Types
+import type {
   ModalState,
   AnimateCloseModalProps,
   CloseModalProps,
   OpenModalProps,
+} from '@shaquillehinds/react-native-bottom-sheet';
+
+// Portal Types
+import type {
+  PortalItem,
+  PortalKey,
+  PortalContextValue,
 } from '@shaquillehinds/react-native-bottom-sheet';
 ```
 
@@ -705,6 +987,166 @@ export default function FormExample() {
 }
 ```
 
+### Custom Portal Overlay Example
+
+```tsx
+import React, { useState } from 'react';
+import { View, Text, Button, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  BottomSheetPortalProvider,
+  useBottomSheetPortalComponent,
+} from '@shaquillehinds/react-native-bottom-sheet';
+
+// App root with provider
+export default function App() {
+  return (
+    <BottomSheetPortalProvider>
+      <MyScreen />
+    </BottomSheetPortalProvider>
+  );
+}
+
+// Screen with custom portal overlay
+function MyScreen() {
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Mount custom overlay to portal
+  useBottomSheetPortalComponent({
+    name: 'custom-overlay',
+    Component: showOverlay ? (
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={() => setShowOverlay(false)}
+      >
+        <View style={styles.overlayContent}>
+          <Text style={styles.overlayText}>{message}</Text>
+          <Button title="Close" onPress={() => setShowOverlay(false)} />
+        </View>
+      </TouchableOpacity>
+    ) : null,
+    disable: !showOverlay,
+  });
+
+  const showCustomOverlay = (msg: string) => {
+    setMessage(msg);
+    setShowOverlay(true);
+  };
+
+  return (
+    <View style={styles.container}>
+      <Button
+        title="Show Portal Overlay"
+        onPress={() => showCustomOverlay('This is rendered in the portal!')}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayContent: {
+    backgroundColor: 'white',
+    padding: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  overlayText: {
+    fontSize: 18,
+    marginBottom: 20,
+  },
+});
+```
+
+### Multi-Level Portal Example
+
+```tsx
+import React, { createContext, useState } from 'react';
+import { View, Button } from 'react-native';
+import {
+  BottomSheetPortalProvider,
+  BottomSheetModal,
+} from '@shaquillehinds/react-native-bottom-sheet';
+import type { PortalContextValue } from '@shaquillehinds/react-native-bottom-sheet';
+
+// Create custom portal contexts for different levels
+const ScreenPortalContext = createContext<PortalContextValue | undefined>(
+  undefined
+);
+const DialogPortalContext = createContext<PortalContextValue | undefined>(
+  undefined
+);
+
+export default function App() {
+  return (
+    // Global portal for app-wide modals
+    <BottomSheetPortalProvider>
+      <Navigation />
+    </BottomSheetPortalProvider>
+  );
+}
+
+function MyScreen() {
+  const [showScreenModal, setShowScreenModal] = useState(false);
+  const [showDialogModal, setShowDialogModal] = useState(false);
+
+  return (
+    // Screen-specific portal
+    <BottomSheetPortalProvider CustomPortalContext={ScreenPortalContext}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Button
+          title="Open Screen Modal"
+          onPress={() => setShowScreenModal(true)}
+        />
+
+        {/* Modal using screen portal */}
+        <BottomSheetModal
+          CustomPortalContext={ScreenPortalContext}
+          showModal={showScreenModal}
+          setShowModal={setShowScreenModal}
+          snapPoints={[50]}
+        >
+          <View style={{ padding: 20 }}>
+            <Text>Screen-level modal</Text>
+            <Button
+              title="Open Dialog"
+              onPress={() => setShowDialogModal(true)}
+            />
+
+            {/* Nested modal using dialog portal */}
+            <BottomSheetPortalProvider
+              CustomPortalContext={DialogPortalContext}
+            >
+              <BottomSheetModal
+                CustomPortalContext={DialogPortalContext}
+                showModal={showDialogModal}
+                setShowModal={setShowDialogModal}
+                snapPoints={[30]}
+              >
+                <View style={{ padding: 20 }}>
+                  <Text>Dialog-level modal</Text>
+                </View>
+              </BottomSheetModal>
+            </BottomSheetPortalProvider>
+          </View>
+        </BottomSheetModal>
+      </View>
+    </BottomSheetPortalProvider>
+  );
+}
+```
+
 ## Performance Best Practices
 
 1. **Use `useImperativeHandle` pattern**: This package follows the render isolation pattern to prevent parent re-renders when animating
@@ -805,6 +1247,95 @@ function FilterPanel() {
 }
 ```
 
+### Toast Notification (Using Portal)
+
+```tsx
+import { useBottomSheetPortalComponent } from '@shaquillehinds/react-native-bottom-sheet';
+
+function useToast() {
+  const [message, setMessage] = useState('');
+  const [visible, setVisible] = useState(false);
+
+  useBottomSheetPortalComponent({
+    name: 'toast',
+    Component: visible ? (
+      <Animated.View
+        entering={SlideInDown}
+        exiting={SlideOutUp}
+        style={{
+          position: 'absolute',
+          top: 50,
+          alignSelf: 'center',
+          backgroundColor: '#333',
+          padding: 15,
+          borderRadius: 8,
+        }}
+      >
+        <Text style={{ color: 'white' }}>{message}</Text>
+      </Animated.View>
+    ) : null,
+    disable: !visible,
+  });
+
+  const show = (msg: string) => {
+    setMessage(msg);
+    setVisible(true);
+    setTimeout(() => setVisible(false), 3000);
+  };
+
+  return { show };
+}
+
+// Usage
+function MyComponent() {
+  const toast = useToast();
+
+  return <Button title="Show Toast" onPress={() => toast.show('Hello!')} />;
+}
+```
+
+### Loading Overlay (Using Portal)
+
+```tsx
+import { useBottomSheetPortalComponent } from '@shaquillehinds/react-native-bottom-sheet';
+
+function useLoadingOverlay() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  useBottomSheetPortalComponent({
+    name: 'loading-overlay',
+    Component: isLoading ? (
+      <View
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    ) : null,
+    disable: !isLoading,
+  });
+
+  return { setIsLoading };
+}
+
+// Usage
+function MyComponent() {
+  const { setIsLoading } = useLoadingOverlay();
+
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    await api.submit();
+    setIsLoading(false);
+  };
+
+  return <Button title="Submit" onPress={handleSubmit} />;
+}
+```
+
 ## Troubleshooting
 
 ### Modal doesn't appear
@@ -817,6 +1348,55 @@ module.exports = {
   presets: ['module:metro-react-native-babel-preset'],
   plugins: ['react-native-reanimated/plugin'],
 };
+```
+
+**Also verify `BottomSheetPortalProvider` is set up at your app root:**
+
+```tsx
+// App.tsx
+import { BottomSheetPortalProvider } from '@shaquillehinds/react-native-bottom-sheet';
+
+export default function App() {
+  return (
+    <BottomSheetPortalProvider>
+      <YourNavigator />
+    </BottomSheetPortalProvider>
+  );
+}
+```
+
+### Modal appears behind navigation or other elements
+
+This typically means the portal provider is not at a high enough level in your component tree. The provider should wrap your navigation container:
+
+```tsx
+// ✅ Correct - Provider wraps navigation
+<BottomSheetPortalProvider>
+  <NavigationContainer>
+    <Stack.Navigator>
+      {/* screens */}
+    </Stack.Navigator>
+  </NavigationContainer>
+</BottomSheetPortalProvider>
+
+// ❌ Incorrect - Provider inside navigation
+<NavigationContainer>
+  <BottomSheetPortalProvider>
+    <Stack.Navigator>
+      {/* screens */}
+    </Stack.Navigator>
+  </BottomSheetPortalProvider>
+</NavigationContainer>
+```
+
+### Portal content flickers or unmounts unexpectedly
+
+Adjust the `unMountBufferTimeMS` prop on the provider:
+
+```tsx
+<BottomSheetPortalProvider unMountBufferTimeMS={200}>
+  <YourApp />
+</BottomSheetPortalProvider>
 ```
 
 ### Scrolling issues
