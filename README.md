@@ -5,6 +5,8 @@ A performant, highly customizable bottom sheet component for React Native that j
 [![npm version](https://badge.fury.io/js/@shaquillehinds%2Freact-native-bottom-sheet.svg)](https://badge.fury.io/js/@shaquillehinds%2Freact-native-bottom-sheet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<img src="https://raw.githubusercontent.com/shaquillehinds/react-native-bottom-sheet/master/assets/bottomsheet.gif" alt="example" height="500"/>
+
 ## Features
 
 - 🎯 **Multiple Snap Points** - Define custom snap positions as percentages of screen height
