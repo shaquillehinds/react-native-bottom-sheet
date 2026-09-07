@@ -20,6 +20,9 @@
       }
     }
   },
+  "bin": {
+    "rnbs-rules": "./bin/install-rules.js"
+  },
   "files": [
     "lib",
     "src",
