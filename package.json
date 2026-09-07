@@ -26,6 +26,8 @@
     "android",
     "ios",
     "cpp",
+    "rules",
+    "bin",
     "*.podspec",
     "react-native.config.js",
     "!ios/build",
