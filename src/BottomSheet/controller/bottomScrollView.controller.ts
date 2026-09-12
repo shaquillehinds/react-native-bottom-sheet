@@ -7,7 +7,7 @@ import type {
 import { BottomSheetContext } from '../components/BottomSheet';
 
 export function bottomScrollViewController(props: BottomSheetScrollViewProps) {
-  let { onScroll, refScrollView, ...scrollViewProps } = props;
+  const { onScroll, refScrollView, ...scrollViewProps } = props;
 
   const context = useContext(BottomSheetContext);
 
@@ -16,10 +16,9 @@ export function bottomScrollViewController(props: BottomSheetScrollViewProps) {
   const animatedScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       if (scrollY) scrollY.value = event.contentOffset.y;
-      if (onScroll) {
-        onScroll = onScroll as ReanimatedOnScroll;
-        onScroll(event);
-      }
+      // A worklet's captured values are constants on the UI runtime —
+      // reassigning one fails to compile there and aborts on the first scroll.
+      if (onScroll) (onScroll as ReanimatedOnScroll)(event);
     },
   });
 
